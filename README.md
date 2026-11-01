@@ -4,8 +4,10 @@ An in-depth, fully procedural train simulator that runs in the browser. Drive me
 regional, heavy-rail and high-speed services across a growing network, manage the timetable, and
 build a career out of fares, punctuality and route rights.
 
-Everything is generated at runtime: the alignments, stations, scenery, train bodies, cab interiors,
-passengers and the soundtrack. There are no downloaded models, textures or audio files.
+Everything in the simulation is generated at runtime: the alignments, stations, scenery, train
+bodies, cab interiors, passengers and soundtrack. There are no downloaded models, textures or audio
+files. The interface is a React 19 overlay on Tailwind CSS v4 and shadcn/Base UI; its two typefaces
+are loaded from Google Fonts.
 
 ## Run it
 
@@ -15,6 +17,14 @@ npm run dev
 ```
 
 Open the printed URL. `npm run build` produces a static bundle in `dist/`.
+
+## UI architecture
+
+The simulation remains framework-free TypeScript and Three.js. `src/ui/hud.tsx` is the facade the
+engine talks to; it writes presentation state into the typed store in `src/ui/store.ts`. React
+screens under `src/ui/screens/` subscribe to narrow `useUiStore` selectors, so driving HUD updates
+never re-render the menu or dispatch board. Shared rail-signal primitives live in
+`src/ui/components/`; generated shadcn/Base UI components live in `src/components/ui/`.
 
 ## Play online
 
@@ -44,8 +54,10 @@ Every push to `main` runs `.github/workflows/deploy.yml`, which typechecks, buil
 - **Living atmosphere** — time-of-day lighting, sun/shadow direction, station lights, rain and
   wet-rail adhesion, procedural traction-motor whine, rail-joint clacks, brake squeal, air hiss,
   horn, door chimes and speech-synthesised station announcements.
-- **Full UI** — route strip, speedometer, power/brake notches, service clock and delay, next-stop
-  guidance, dispatch board with route maps, depot and results screens, settings and persistence.
+- **Full UI** — a transit-control interface across the departure-board menu, dispatch map, depot,
+  driver console, pause settings and service report. It includes a route spine, next-stop board,
+  limit sign, load meter, speedometer, power/brake notches, responsive layouts, keyboard focus and
+  reduced-motion support.
 
 ## Controls
 

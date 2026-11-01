@@ -9,7 +9,7 @@ import { PassengerSystem } from '../world/passengers';
 import { TrainSim } from '../train/trainSim';
 import { TrainMesh } from '../train/trainMesh';
 import { AudioEngine } from '../systems/audio';
-import { HudState, RouteItemState } from '../ui/hud';
+import type { HudState, RouteItemState } from '../ui/hud';
 import { ServiceResult } from '../systems/economy';
 import { Rng, clamp, formatHM, hashString } from './util';
 
