@@ -1,13 +1,12 @@
-# Railbound — Transit Simulator
+# Nightshift — Driving Game
 
-An in-depth, fully procedural train simulator that runs in the browser. Drive metro, light rail,
-regional, heavy-rail and high-speed services across a growing network, manage the timetable, and
-build a career out of fares, punctuality and route rights.
+A first-person driving game set on a wet, winding highway at dusk. Sit inside a minimal
+cockpit, chase the sodium lights and bank clean sectors to upgrade the car. Everything in
+the scene — road, skyline, streetlights, lamps, textures, engine and tyre audio — is
+generated at runtime. No models, images or audio files are downloaded.
 
-Everything in the simulation is generated at runtime: the alignments, stations, scenery, train
-bodies, cab interiors, passengers and soundtrack. There are no downloaded models, textures or audio
-files. The interface is a React 19 overlay on Tailwind CSS v4 and shadcn/Base UI; its two typefaces
-are loaded from Google Fonts.
+Built with Three.js, [cannon-es](https://github.com/pmndrs/cannon-es) `RaycastVehicle`,
+React 19, Tailwind CSS v4 and Vite.
 
 ## Run it
 
@@ -16,74 +15,76 @@ npm install
 npm run dev
 ```
 
-Open the printed URL. `npm run build` produces a static bundle in `dist/`.
+Open the printed URL. `npm run build` typechecks and emits a static bundle in `dist/`.
 
-## UI architecture
+## The drive
 
-The simulation remains framework-free TypeScript and Three.js. `src/ui/hud.tsx` is the facade the
-engine talks to; it writes presentation state into the typed store in `src/ui/store.ts`. React
-screens under `src/ui/screens/` subscribe to narrow `useUiStore` selectors, so driving HUD updates
-never re-render the menu or dispatch board. Shared rail-signal primitives live in
-`src/ui/components/`; generated shadcn/Base UI components live in `src/components/ui/`.
+- **Cockpit camera** — 80° PerspectiveCamera inside a modelled interior with a dashboard,
+  binnacle, windscreen frame, mirror and a steering wheel that turns with the front wheels.
+- **Camera feel** — spring lag, 2° of head tilt into corners, forward pitch under braking,
+  speed-scaled micro-vibration and dynamic FOV that opens from 80° to 94° at speed.
+- **Lighting** — dusk sky shader with a sun glow and moon, high-contrast sodium streetlights,
+  wet asphalt with clearcoat and roughness puddles, coloured traffic signal reflections and
+  two shadow-casting headlight spotlights on the front bumper.
+- **Driving** — cannon-es raycast suspension, a six-speed automatic with a torque curve,
+  braking, reverse, a handbrake that breaks the rear tyres loose, and self-centering steering.
+  Aerodynamic drag and rolling resistance keep top speed honest.
+- **World** — a closed 1.6 km spline highway with lane markings, guardrails, lamp arrays,
+  three signal gantries, twelve sector arches, a night skyline and distant ridges.
+- **HUD** — digital speedometer (km/h or mph), gear, tachometer, lap and sector progress,
+  credits and level. No superfluous panels while driving.
 
-## Play online
+## Progression
 
-The latest build is live at <https://mpeeer.github.io/train-sim-/>.
+Clear the twelve sector gates around the loop. Each gate pays credits and XP based on speed;
+crossing a gate without touching a guardrail earns a clean-line bonus. Complete all twelve for
+a lap bonus and a saved best lap. XP raises your driver level, and each upgrade stage unlocks
+at the matching level. Credits buy four upgrade lines in the garage:
 
-Every push to `main` runs `.github/workflows/deploy.yml`, which typechecks, builds and publishes
-`dist/` to GitHub Pages. If the first deployment fails because Pages is disabled, set
-**Settings → Pages → Build and deployment → Source** to **GitHub Actions** and re-run the workflow.
+| Upgrade | Effect |
+| --- | --- |
+| Engine | More torque and top end |
+| Tyres | More lateral grip in the wet |
+| Brakes | Stronger stopping force |
+| Lights | Brighter, longer headlight beam |
 
-## What is in the game
-
-- **Driving simulation** — tractive-effort and power limits, adhesion (with wet-rail slip), Davis
-  rolling resistance, gradient forces, air-brake application and release lag, door interlock,
-  regenerative energy accounting and overspeed protection.
-- **Real cabs and views** — a modelled first-person cab with live screens, animated levers, wipers
-  and a working windscreen; chase and orbit cameras with mouse look, zoom and suspension motion.
-- **Railway world** — procedurally generated alignments with curvature and gradient limits,
-  double track, ballast, sleepers, catenary, signals, speed boards, buffer stops, platforms,
-  canopies, footbridges and station signage. Five distinct regions, from harbour city to alpine pass.
-- **Passengers** — platform crowds that idle, wander, cluster at doors, board and alight, with
-  crowding and comfort affecting satisfaction and fares.
-- **Economy and career** — fares, punctuality bonuses, stopping accuracy, penalties, energy,
-  maintenance and crew costs. Buy route rights, rolling stock and depot upgrades. Experience and
-  levels gate new content.
-- **Endless network** — every region generates additional lines as your level rises, each with its
-  own alignment, demand and fare multiplier.
-- **Living atmosphere** — time-of-day lighting, sun/shadow direction, station lights, rain and
-  wet-rail adhesion, procedural traction-motor whine, rail-joint clacks, brake squeal, air hiss,
-  horn, door chimes and speech-synthesised station announcements.
-- **Full UI** — a transit-control interface across the departure-board menu, dispatch map, depot,
-  driver console, pause settings and service report. It includes a route spine, next-stop board,
-  limit sign, load meter, speedometer, power/brake notches, responsive layouts, keyboard focus and
-  reduced-motion support.
+Career progress, settings, level, best lap, distance and upgrades persist in `localStorage`.
 
 ## Controls
 
 | Key | Action |
 | --- | --- |
-| `W` / `↑` | Increase power |
-| `S` / `↓` | Increase brake |
-| `Z` | Throttle to coast |
-| `X` | Release brake |
-| `E` | Emergency brake |
-| `D` | Open / close doors |
-| `Space` | Horn |
-| `H` | Headlights (off / dipped / full) |
-| `F` | Wipers |
-| `R` | Change reverser (when stopped) |
-| `C` | Cycle camera (cab / chase / orbit) |
-| Mouse drag | Look around |
-| Mouse wheel | Zoom camera |
+| `W` / `↑` | Throttle |
+| `S` / `↓` | Brake / reverse |
+| `A` `D` / `←` `→` | Steer |
+| `Space` | Handbrake |
+| `R` | Recover onto the road |
+| `U` | Toggle km/h · mph |
+| `M` | Mute audio |
 | `Esc` | Pause |
+| `Enter` | Start / resume |
 
-## How a service works
+## Structure
 
-Close the doors, take power and run to the next station. Brake early: the platform speed limit and
-the stop board are the two things that decide your score. Stop with the cab at the stop board, close
-the doors after the exchange, and repeat. Punctuality and precise stops pay; hard braking, overspeed
-and missed platforms cost money and passenger satisfaction. At the terminus close the doors to
-complete the service and see the receipt.
+```
+src/game/
+  physics.ts      raycast vehicle, gearbox, drag, handbrake
+  vehicle.ts      cockpit, wheels and headlights
+  cockpit.ts      interior geometry, steering wheel, in-dash screen
+  cameraRig.ts    spring lag, tilt, braking pitch, vibration, FOV
+  world.ts        road, lamps, signals, gates, city, sky
+  route.ts        closed spline, gate distances and placement
+  game.ts         loop, run scoring, career persistence, UI bridge
+  store.ts        tiny external stores and localStorage
+src/ui/           React HUD, title, pause and garage screens
+```
 
-Progress is saved locally in the browser.
+## Deployment
+
+Every push to `main` runs `.github/workflows/deploy.yml`, which typechecks, builds and
+publishes `dist/` to GitHub Pages. The published URL follows the repository name. If the first
+run fails because Pages is disabled, set **Settings → Pages → Build and deployment → Source**
+to **GitHub Actions** and re-run the workflow.
+
+This repository was rebuilt from an earlier transit-simulator prototype; its contents have been
+replaced by Nightshift.
