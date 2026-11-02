@@ -13,7 +13,7 @@ export function App({ api }: { api: GameApi }) {
   return (
     <div className="relative h-full w-full overflow-hidden">
       <div className="vignette pointer-events-none absolute inset-0 z-10" />
-      {state.screen !== 'menu' && <Hud api={api} />}
+      {state.screen !== 'menu' && <Hud />}
       <ToastView toast={state.toast} />
       {state.screen === 'menu' && <StartScreen api={api} state={state} />}
       {state.screen === 'paused' && <PauseScreen api={api} state={state} />}

@@ -1,9 +1,9 @@
 {
-  "name": "nightshift-driving-game",
+  "name": "coastline-driving-game",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Nightshift — a first-person wet-highway driving game with raycast vehicle physics, cockpit view and a light career mode.",
+  "description": "Coastline — a lightweight first-person open-island driving game with raycast physics, cockpit view and a light career mode.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

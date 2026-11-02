@@ -1,4 +1,5 @@
 import { UPGRADES, levelInfo, upgradeCost } from '../game/config';
+import { CAR_MODELS } from '../game/carModels';
 import { formatCredits, machineName } from '../game/format';
 import type { GameApi } from '../game/api';
 import type { UiState } from '../game/types';
@@ -13,7 +14,7 @@ export function GarageScreen({ api, state }: { api: GameApi; state: UiState }) {
         <div className="ui-panel animate-rise overflow-hidden">
           <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-6 py-5">
             <div>
-              <div className="ui-label">Service bay · wet setup</div>
+              <div className="ui-label">Service bay · island tune</div>
               <h2 className="mt-2 font-display text-[42px] font-semibold uppercase leading-none tracking-wide">
                 Garage
               </h2>
@@ -42,6 +43,51 @@ export function GarageScreen({ api, state }: { api: GameApi; state: UiState }) {
               <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/30">
                 {Math.round(level.progress * 100)}%
               </span>
+            </div>
+          </div>
+
+          <div className="border-b border-white/[0.06] px-6 py-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="ui-label">Bodywork · choose a car</span>
+              <span className="font-mono text-[8px] uppercase tracking-[0.14em] text-white/22">
+                Shown in chase view · press C
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {CAR_MODELS.map((model) => {
+                const selected = state.settings.car === model.id;
+                return (
+                  <button
+                    key={model.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => api.setCar(model.id)}
+                    className={`group flex min-w-0 flex-col rounded-[5px] border px-3.5 py-3 text-left transition-colors ${
+                      selected
+                        ? 'border-signal/60 bg-signal/[0.07]'
+                        : 'border-white/10 bg-white/[0.015] hover:border-white/20 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <span
+                        className={`truncate font-display text-[21px] uppercase leading-none tracking-wide ${
+                          selected ? 'text-white' : 'text-white/65'
+                        }`}
+                      >
+                        {model.name}
+                      </span>
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                          selected ? 'bg-signal' : 'bg-white/15 group-hover:bg-white/30'
+                        }`}
+                      />
+                    </div>
+                    <span className="mt-2 font-mono text-[8px] uppercase tracking-[0.12em] text-white/28">
+                      {model.eyebrow}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -117,7 +163,7 @@ export function GarageScreen({ api, state }: { api: GameApi; state: UiState }) {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-6 py-4">
             <span className="font-mono text-[8px] uppercase tracking-[0.16em] text-white/25">
-              Upgrades save immediately · stages unlock with driver level
+              Upgrades save immediately · stages unlock with driver level · setup carries everywhere
             </span>
             <button type="button" className="btn btn-ghost btn-small" onClick={() => api.closeGarage()}>
               Close

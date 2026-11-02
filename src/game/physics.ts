@@ -5,7 +5,7 @@ export interface CarSpec {
   engine: number;
   grip: number;
   brakes: number;
-  lights: number;
+  aero: number;
 }
 
 export interface CarInput {
@@ -54,8 +54,9 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * RaycastVehicle-backed car. Wheel suspension is raycast against a flat road plane,
- * forces are applied through cannon-es' RaycastVehicle friction model.
+ * A forgiving raycast car. It keeps the weight transfer and rear-drive feel of
+ * the original, but uses more grip, gentler steering and useful downforce so a
+ * keyboard lap stays smooth rather than twitchy.
  */
 export class CarPhysics {
   readonly world: CANNON.World;
@@ -77,7 +78,6 @@ export class CarPhysics {
 
   private shiftTimer = 0;
   private reverseHold = 0;
-  private dragAccumulator = 0;
 
   constructor(spec: CarSpec) {
     this.spec = spec;
@@ -98,8 +98,8 @@ export class CarPhysics {
     this.chassis = new CANNON.Body({
       mass: CAR.mass,
       material: new CANNON.Material('chassis'),
-      linearDamping: 0.015,
-      angularDamping: 0.35,
+      linearDamping: 0.012,
+      angularDamping: 0.45,
     });
     this.chassis.addShape(new CANNON.Box(new CANNON.Vec3(0.88, 0.36, 2)));
 
@@ -118,8 +118,6 @@ export class CarPhysics {
       [-CAR.trackHalf, -0.28, -CAR.rearAxle],
     ];
 
-    const baseFriction = 2.15 * spec.grip;
-
     connectionPoints.forEach((point, i) => {
       this.vehicle.addWheel({
         radius: CAR.wheelRadius,
@@ -127,15 +125,15 @@ export class CarPhysics {
         axleLocal: new CANNON.Vec3(-1, 0, 0),
         chassisConnectionPointLocal: new CANNON.Vec3(point[0], point[1], point[2]),
         isFrontWheel: i < 2,
-        suspensionStiffness: 33,
+        suspensionStiffness: 38,
         suspensionRestLength: CAR.suspensionRest,
-        frictionSlip: baseFriction,
-        dampingRelaxation: 2.6,
-        dampingCompression: 4.6,
-        maxSuspensionForce: 130000,
-        maxSuspensionTravel: 0.3,
-        rollInfluence: 0.035,
-        customSlidingRotationalSpeed: -35,
+        frictionSlip: 2.45 * spec.grip,
+        dampingRelaxation: 3.1,
+        dampingCompression: 5.1,
+        maxSuspensionForce: 140000,
+        maxSuspensionTravel: 0.28,
+        rollInfluence: 0.024,
+        customSlidingRotationalSpeed: -32,
         useCustomSlidingRotationalSpeed: true,
       });
     });
@@ -146,7 +144,7 @@ export class CarPhysics {
 
   setSpec(spec: CarSpec): void {
     this.spec = spec;
-    const friction = 2.15 * spec.grip;
+    const friction = 2.45 * spec.grip;
     for (const wheel of this.vehicle.wheelInfos) {
       wheel.frictionSlip = friction;
     }
@@ -221,16 +219,16 @@ export class CarPhysics {
     const throttleInput = this.reverse ? input.brake : input.throttle;
     const brakeInput = this.reverse ? input.throttle : input.brake;
 
-    this.throttle = damp(this.throttle, throttleInput, 14, dt);
-    this.brakeAmount = damp(this.brakeAmount, brakeInput, 18, dt);
+    this.throttle = damp(this.throttle, throttleInput, 12, dt);
+    this.brakeAmount = damp(this.brakeAmount, brakeInput, 15, dt);
     this.handbrake = input.handbrake;
 
     const absSpeed = Math.abs(signedSpeed);
-    const maxSteer = 0.52 - 0.39 * clamp(absSpeed / 55, 0, 1);
+    const maxSteer = 0.54 - 0.41 * clamp(absSpeed / 52, 0, 1);
     const steerTarget = clamp(input.steer, -1, 1) * maxSteer;
-    const steerRate = Math.abs(input.steer) > 0.01 ? 9 : 7;
+    const steerRate = Math.abs(input.steer) > 0.01 ? 7.5 : 8.5;
     this.steering = damp(this.steering, steerTarget, steerRate, dt);
-    this.steeringVisual = damp(this.steeringVisual, this.steering, 18, dt);
+    this.steeringVisual = damp(this.steeringVisual, this.steering, 20, dt);
 
     // cannon-es: positive steering angle turns left. Driver steer is positive to the right.
     const wheelSteer = -this.steering;
@@ -241,7 +239,6 @@ export class CarPhysics {
     const wheelOmega = absSpeed / CAR.wheelRadius;
     let rpm = (wheelOmega * Math.abs(ratio) * FINAL_DRIVE * 60) / (Math.PI * 2);
 
-    // Clutch slip off the line so launches sound and pull like a real car.
     if (!this.reverse && absSpeed < 9) {
       rpm = Math.max(rpm, IDLE_RPM + this.throttle * 2400);
     }
@@ -250,12 +247,12 @@ export class CarPhysics {
 
     this.shiftTimer = Math.max(0, this.shiftTimer - dt);
     if (!this.reverse && this.shiftTimer <= 0) {
-      if (this.gear < GEARS.length && rpm > 6100 && absSpeed > 6) {
+      if (this.gear < GEARS.length && rpm > 6200 && absSpeed > 6) {
         this.gear += 1;
-        this.shiftTimer = 0.32;
-      } else if (this.gear > 1 && rpm < 1950) {
+        this.shiftTimer = 0.3;
+      } else if (this.gear > 1 && rpm < 1900) {
         this.gear -= 1;
-        this.shiftTimer = 0.26;
+        this.shiftTimer = 0.24;
       }
     }
 
@@ -275,24 +272,29 @@ export class CarPhysics {
       this.vehicle.applyEngineForce(canDrive && i >= 2 ? perWheel : 0, i);
     }
 
-    const frontBrake = 105 * this.spec.brakes * this.brakeAmount;
-    const rearBrake = 78 * this.spec.brakes * this.brakeAmount;
+    const frontBrake = 100 * this.spec.brakes * this.brakeAmount;
+    const rearBrake = 74 * this.spec.brakes * this.brakeAmount;
     this.vehicle.setBrake(frontBrake, 0);
     this.vehicle.setBrake(frontBrake, 1);
     this.vehicle.setBrake(rearBrake, 2);
     this.vehicle.setBrake(rearBrake, 3);
 
     if (this.handbrake && absSpeed > 1.5) {
-      this.vehicle.setBrake(150, 2);
-      this.vehicle.setBrake(150, 3);
+      this.vehicle.setBrake(128, 2);
+      this.vehicle.setBrake(128, 3);
     }
 
-    const grip = 2.15 * this.spec.grip;
+    const grip = 2.45 * this.spec.grip;
     for (let i = 0; i < 4; i++) {
       const wheel = this.vehicle.wheelInfos[i];
       const slidingRear = this.handbrake && i >= 2 && absSpeed > 3;
-      wheel.frictionSlip = slidingRear ? grip * 0.72 : grip;
+      // The handbrake still rotates the car, but keeps enough bite to recover.
+      wheel.frictionSlip = slidingRear ? grip * 0.82 : grip;
     }
+
+    // Downforce settles the car on fast sweepers without making it feel planted to the floor.
+    const downforce = Math.min(3600, absSpeed * absSpeed * 0.42 * this.spec.aero);
+    this.chassis.force.y -= downforce;
 
     this.world.step(1 / 60, dt, 4);
 
@@ -302,12 +304,11 @@ export class CarPhysics {
     if (horizontal > 0.1) {
       const drag = 0.5 * 1.2 * 0.9 * horizontal * horizontal + 175;
       const deceleration = (drag / CAR.mass) * dt;
-      this.dragAccumulator = 1 - clamp(deceleration / horizontal, 0, 0.5);
-      v.x *= this.dragAccumulator;
-      v.z *= this.dragAccumulator;
+      const keep = 1 - clamp(deceleration / horizontal, 0, 0.5);
+      v.x *= keep;
+      v.z *= keep;
     }
 
-    // Keep the engine speed in sync with the solved velocity.
     const forwardNow = this.forwardVector();
     signedSpeed = this.chassis.velocity.dot(forwardNow);
     this.signedSpeed = signedSpeed;

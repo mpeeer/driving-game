@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import { regionById } from '../game/config';
+import { formatTime } from '../game/format';
 import type { GameApi } from '../game/api';
-import type { UiState, Units, Quality } from '../game/types';
+import type { CameraMode, UiState, Units, Quality } from '../game/types';
 
 function Segmented<T extends string>({
   value,
@@ -20,7 +22,7 @@ function Segmented<T extends string>({
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={`rounded px-2 py-1 font-mono text-[8px] uppercase tracking-[0.14em] transition-colors ${
-            value === option.value ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
+            value === option.value ? 'bg-white/12 text-white' : 'text-white/32 hover:text-white/60'
           }`}
         >
           {option.label}
@@ -54,26 +56,34 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (on: boolean) 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
-      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/40">{label}</span>
+      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/42">{label}</span>
       {children}
     </div>
   );
 }
 
 export function PauseScreen({ api, state }: { api: GameApi; state: UiState }) {
+  const region = regionById(state.settings.region);
+
   return (
-    <div className="pointer-events-auto absolute inset-0 z-30 flex items-center justify-center bg-[#03050a]/60 p-4 backdrop-blur-[6px]">
-      <div className="ui-panel animate-rise max-h-[92vh] w-full max-w-[390px] overflow-y-auto">
-        <div className="border-b border-white/[0.06] px-6 pb-5 pt-6">
+    <div className="pointer-events-auto absolute inset-0 z-30 flex items-center justify-center bg-[#041012]/55 p-4 backdrop-blur-[5px]">
+      <div className="ui-panel animate-rise max-h-[92vh] w-full max-w-[400px] overflow-y-auto">
+        <div className="border-b border-white/[0.07] px-6 pb-5 pt-6">
           <div className="flex items-center gap-2.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-signal" />
-            <span className="ui-label">Holding position</span>
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: region.color }} />
+            <span className="ui-label">Parked · {region.name}</span>
           </div>
-          <h2 className="mt-3 font-display text-[42px] font-semibold uppercase leading-none tracking-wide text-white">
+          <h2 className="mt-3 font-display text-[44px] font-semibold uppercase leading-none tracking-wide text-white">
             Paused
           </h2>
-          <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.16em] text-white/30">
-            {state.profile.laps} laps · {state.profile.credits.toLocaleString('en-US')} credits
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[9px] uppercase tracking-[0.15em] text-white/32">
+            <span>{state.profile.laps} island laps</span>
+            <span className="text-white/15">/</span>
+            <span>{state.profile.credits.toLocaleString('en-US')} credits</span>
+            <span className="text-white/15">/</span>
+            <span>best {formatTime(state.profile.bestLap)}</span>
+            <span className="text-white/15">/</span>
+            <span>trial {formatTime(state.profile.bestTrial)}</span>
           </p>
         </div>
 
@@ -86,16 +96,26 @@ export function PauseScreen({ api, state }: { api: GameApi; state: UiState }) {
               Garage
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => api.restartRun()}>
-              Restart
+              Restart run
             </button>
           </div>
           <button type="button" className="btn btn-text w-full" onClick={() => api.toMenu()}>
-            Return to menu
+            Return to island map
           </button>
         </div>
 
-        <div className="border-t border-white/[0.06] px-6 py-4">
+        <div className="border-t border-white/[0.07] px-6 py-4">
           <div className="ui-label mb-1">Settings</div>
+          <Row label="Camera">
+            <Segmented<CameraMode>
+              value={state.settings.camera}
+              options={[
+                { value: 'cockpit', label: 'Cockpit' },
+                { value: 'chase', label: 'Chase' },
+              ]}
+              onChange={(camera) => api.setCamera(camera)}
+            />
+          </Row>
           <Row label="Units">
             <Segmented<Units>
               value={state.settings.units}
@@ -118,11 +138,7 @@ export function PauseScreen({ api, state }: { api: GameApi; state: UiState }) {
             />
           </Row>
           <Row label="Sound">
-            <Toggle
-              label="Sound"
-              on={!state.settings.muted}
-              onChange={() => api.toggleMute()}
-            />
+            <Toggle label="Sound" on={!state.settings.muted} onChange={() => api.toggleMute()} />
           </Row>
           <Row label="Camera shake">
             <Toggle
@@ -133,8 +149,9 @@ export function PauseScreen({ api, state }: { api: GameApi; state: UiState }) {
           </Row>
         </div>
 
-        <div className="border-t border-white/[0.06] px-6 py-3 text-center">
-          <span className="ui-label text-white/25">Esc to resume · M sound</span>
+        <div className="flex items-center justify-between border-t border-white/[0.07] px-6 py-3">
+          <span className="ui-label text-white/25">Esc to resume · C camera · M sound</span>
+          <span className="font-mono text-[8px] uppercase tracking-[0.13em] text-white/20">adaptive resolution</span>
         </div>
       </div>
     </div>
